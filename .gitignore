@@ -1,0 +1,21 @@
+# Environnements et fichiers temporaires
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Fichiers de build
+build/
+dist/
+*.spec
+
+# Logs
+logs/
+*.log
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.idea/
+*.sqlite3
+.env
