@@ -1,4 +1,5 @@
 from app.web_attack import web_login_brute_force
+from app.web_attack import json_login_brute_force
 from app.wordpress_cracker import wp_login_brute_force
 from app.imap_cracker import imap_brute_force
 from app.utils import load_wordlist
@@ -30,6 +31,9 @@ def launch_attack(mode, target_type, target, username, wordlist_path, hash_type=
             return wp_login_brute_force(target, username, wordlist)
         elif target_type == "IMAP Email":
             return imap_brute_force(target, username, wordlist)
+        elif target_type == "JSON Web Login":
+            return json_login_brute_force(target, username, wordlist)
+
         else:
             yield 100, None
 

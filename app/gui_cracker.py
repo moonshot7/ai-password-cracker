@@ -75,7 +75,7 @@ tk.OptionMenu(root, mode_var, "Brute-force", "Dictionary", "Both", "Offline Hash
 
 tk.Label(root, text="Target Type").pack()
 target_type_var = tk.StringVar(value="Web Form")
-tk.OptionMenu(root, target_type_var, "Web Form", "WordPress", "IMAP Email").pack()
+tk.OptionMenu(root, target_type_var, "Web Form", "WordPress", "IMAP Email", "JSON Web Login").pack()
 
 tk.Label(root, text="Target (URL / IP / Hash)").pack()
 target_entry = tk.Entry(root, width=80)

