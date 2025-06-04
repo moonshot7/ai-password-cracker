@@ -1,97 +1,86 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-from utils import load_wordlist, log_attempt
-from universal_cracker import analyze_target, launch_attack
-import threading
+from tkinter import filedialog, messagebox
+from tkinter import ttk
+from threading import Thread
+from app.universal_cracker import launch_attack
 
-class UniversalCrackerGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Universal Password Cracker GUI")
-        self.root.geometry("650x500")
-        self.build_interface()
+def browse_file(entry):
+    path = filedialog.askopenfilename()
+    if path:
+        entry.delete(0, tk.END)
+        entry.insert(0, path)
 
-    def build_interface(self):
-        # Type de cible
-        ttk.Label(self.root, text="🎯 Type de cible :", font=("Arial", 12)).pack(pady=5)
-        self.target_type = tk.StringVar(value="web")
-        self.type_menu = ttk.Combobox(self.root, textvariable=self.target_type, state="readonly")
-        self.type_menu['values'] = ["web", "wordpress", "imap", "pdf"]
-        self.type_menu.pack(pady=5)
+def update_progress(percent):
+    progress_var.set(percent)
+    progress_bar.update_idletasks()
 
-        # Champ URL/email/chemin
-        ttk.Label(self.root, text="🔗 URL / Email / Chemin fichier :").pack()
-        self.target_entry = ttk.Entry(self.root, width=60)
-        self.target_entry.pack(pady=5)
+def run_attack_thread():
+    mode = mode_var.get()
+    target_type = target_type_var.get()
+    target = target_entry.get()
+    username = username_entry.get()
+    wordlist_path = wordlist_entry.get()
 
-        # Username (optionnel)
-        ttk.Label(self.root, text="👤 Nom d'utilisateur (facultatif) :").pack()
-        self.username_entry = ttk.Entry(self.root, width=40)
-        self.username_entry.pack(pady=5)
+    if not all([mode, target_type, target, username]):
+        messagebox.showwarning("Missing Fields", "Please fill in all required fields.")
+        return
 
-        # Mode d'attaque
-        ttk.Label(self.root, text="⚙️ Méthode d'attaque :").pack()
-        self.mode_var = tk.StringVar(value="dictionary")
-        ttk.Radiobutton(self.root, text="Dictionnaire", variable=self.mode_var, value="dictionary").pack()
-        ttk.Radiobutton(self.root, text="Brute-force", variable=self.mode_var, value="brute").pack()
+    if mode in ["Dictionary", "Both"] and not wordlist_path:
+        messagebox.showwarning("Missing Wordlist", "Wordlist is required for dictionary-based modes.")
+        return
 
-        # Bruteforce options
-        charset_frame = ttk.Frame(self.root)
-        charset_frame.pack(pady=5)
-        self.charset_entry = ttk.Entry(charset_frame, width=20)
-        self.charset_entry.insert(0, "abc123")
-        self.min_len_entry = ttk.Entry(charset_frame, width=5)
-        self.min_len_entry.insert(0, "4")
-        self.max_len_entry = ttk.Entry(charset_frame, width=5)
-        self.max_len_entry.insert(0, "6")
+    progress_label.config(text="Attack running...")
+    progress_bar["value"] = 0
 
-        ttk.Label(charset_frame, text="Charset:").pack(side="left")
-        self.charset_entry.pack(side="left", padx=5)
-        ttk.Label(charset_frame, text="Min:").pack(side="left")
-        self.min_len_entry.pack(side="left")
-        ttk.Label(charset_frame, text="Max:").pack(side="left")
-        self.max_len_entry.pack(side="left")
+    def run():
+        result = None
+        for progress, found_password in launch_attack(mode, target_type, target, username, wordlist_path):
+            update_progress(progress)
+            if found_password:
+                result = found_password
+                break
 
-        # Lancer + Résultat
-        self.launch_btn = ttk.Button(self.root, text="🚀 Lancer l'attaque", command=self.run_attack)
-        self.launch_btn.pack(pady=15)
+        if result:
+            messagebox.showinfo("Success", f"Password found: {result}")
+        else:
+            messagebox.showwarning("Failure", "No password was found.")
+        progress_label.config(text="")
 
-        self.result_label = ttk.Label(self.root, text="", font=("Courier", 11), foreground="green")
-        self.result_label.pack(pady=10)
+    Thread(target=run).start()
 
-    def run_attack(self):
-        self.result_label.config(text="⏳ Attaque en cours...")
-        self.launch_btn.config(state="disabled")
+# GUI setup
+root = tk.Tk()
+root.title("AI Password Cracker")
+root.geometry("600x400")
 
-        def attack():
-            try:
-                target_type = self.target_type.get()
-                target = self.target_entry.get().strip()
-                username = self.username_entry.get().strip() or target
-                mode = self.mode_var.get()
-                charset = self.charset_entry.get().strip()
-                min_len = int(self.min_len_entry.get())
-                max_len = int(self.max_len_entry.get())
+tk.Label(root, text="Attack Mode").pack()
+mode_var = tk.StringVar(value="Dictionary")
+tk.OptionMenu(root, mode_var, "Brute-force", "Dictionary", "Both").pack()
 
-                wordlist = load_wordlist("data/rockyou.txt") if mode == "dictionary" else []
+tk.Label(root, text="Target Type").pack()
+target_type_var = tk.StringVar(value="Web Form")
+tk.OptionMenu(root, target_type_var, "Web Form", "WordPress", "IMAP Email").pack()
 
-                found = launch_attack(
-                    target_type, target, username, wordlist, mode, charset, min_len, max_len
-                )
+tk.Label(root, text="Target (URL or IP)").pack()
+target_entry = tk.Entry(root, width=80)
+target_entry.pack()
 
-                log_attempt(target, username, mode, found if found else "Not found")
+tk.Label(root, text="Username or Email").pack()
+username_entry = tk.Entry(root, width=50)
+username_entry.pack()
 
-                self.result_label.config(
-                    text=f"[✔] Mot de passe : {found}" if found else "[✘] Aucun mot de passe trouvé."
-                )
-            except Exception as e:
-                self.result_label.config(text=f"[!] Erreur : {e}")
-            finally:
-                self.launch_btn.config(state="normal")
+tk.Label(root, text="Wordlist File").pack()
+wordlist_entry = tk.Entry(root, width=50)
+wordlist_entry.pack()
+tk.Button(root, text="Browse", command=lambda: browse_file(wordlist_entry)).pack()
 
-        threading.Thread(target=attack).start()
+tk.Button(root, text="Start Attack", command=run_attack_thread, bg="green", fg="white").pack(pady=10)
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = UniversalCrackerGUI(root)
-    root.mainloop()
+progress_var = tk.DoubleVar()
+progress_bar = ttk.Progressbar(root, orient="horizontal", length=400, mode="determinate", variable=progress_var)
+progress_bar.pack(pady=10)
+
+progress_label = tk.Label(root, text="", fg="blue")
+progress_label.pack()
+
+root.mainloop()
