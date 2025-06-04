@@ -17,6 +17,9 @@ def log(message):
     log_area.insert(tk.END, message + "\n")
     log_area.see(tk.END)
 
+def clear_logs():
+    log_area.delete("1.0", tk.END)
+
 def run_attack_thread():
     mode = mode_var.get()
     target_type = target_type_var.get()
@@ -91,6 +94,8 @@ ai_var = tk.BooleanVar()
 tk.Checkbutton(root, text="Enable AI model (coming soon)", variable=ai_var).pack()
 
 tk.Button(root, text="Start Attack", command=run_attack_thread, bg="green", fg="white").pack(pady=10)
+
+tk.Button(root, text="Clear Logs", command=clear_logs, bg="gray").pack(pady=5)
 
 progress_var = tk.DoubleVar()
 progress_bar = ttk.Progressbar(root, orient="horizontal", length=500, mode="determinate", variable=progress_var)
